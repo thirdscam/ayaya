@@ -16,6 +16,7 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import net.dv8tion.jda.api.utils.FileUpload;
 
+import java.time.Instant;
 import java.util.List;
 
 public class AyayaBot {
@@ -72,30 +73,34 @@ class BotListener extends ListenerAdapter {
     }
 
     public void hitomi(SlashCommandInteractionEvent event, Integer id) {
-        MessageChannel channel = event.getChannel();
-        event.reply("Message Sent.").setEphemeral(true).queue();
-
         EmbedBuilder eb = new EmbedBuilder();
         eb.setTitle("품번 : " + id);
+        eb.setTimestamp(Instant.now());
 
         // eb.setDescription("This image has been added to the bot.");
         // eb.addBlankField(false);
 
         byte[] webpData = AyayaUtils.GetFileFromUrl(Hitomi.GetHitomiData(id));
         if (webpData == null) {
-            channel.sendMessage("URL에서 이미지를 가져오지 못했습니다. URL이나 서버 상태를 확인해주세요.").queue();
+            event.reply("URL에서 이미지를 가져오지 못했습니다. URL이나 서버 상태를 확인해주세요.")
+                    .setEphemeral(true)
+                    .queue();
             return;
         }
 
         byte[] pngData = AyayaUtils.ConvertWebpToPng(webpData);
         if (pngData == null) {
-            channel.sendMessage("이미지를 PNG로 변환하는 데 실패했습니다. 파일이 올바른 WebP 형식이 아닐 수 있습니다.").queue();
+            event.reply("이미지를 PNG로 변환하는 데 실패했습니다. 파일이 올바른 WebP 형식이 아닐 수 있습니다.")
+                    .setEphemeral(true).queue();
             return;
         }
 
-        FileUpload fileUpload = FileUpload.fromData(pngData, "1.png");
         eb.setImage("attachment://" + "1.png");
+        eb.setFooter("Uploader : " + event.getUser().getName());
 
-        channel.sendFiles(fileUpload).setEmbeds(eb.build()).queue();
+        event.reply("작품을 로드합니다. 조금 기다려주세요...").setEphemeral(true).queue();
+        FileUpload fileUpload = FileUpload.fromData(pngData, "1.png");
+        event.getChannel().sendFiles(fileUpload).setEmbeds(eb.build()).queue();
+        event.getHook().sendMessage("작품을 받아오는 데에 성공하였습니다!").setEphemeral(true).queue();
     }
 }

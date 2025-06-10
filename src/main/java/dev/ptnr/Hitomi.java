@@ -2,134 +2,111 @@ package dev.ptnr;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Hitomi {
-    private static String cdnUrl = ".gold-usergeneratedcontent.net";
-    private static String baseCDNUrl = "https://ltn" + cdnUrl;
+    private static final String cdnUrl = ".gold-usergeneratedcontent.net";
+    private static final String baseCDNUrl = "https://ltn" + cdnUrl;
 
-    private static Map<String, Boolean> getGalleryData(Integer galleryId) throws Exception {
-        Map<String, Boolean> galleryData = new LinkedHashMap<>();
-
+    private static ArrayList<String> getGalleryData(Integer galleryId) {
         String baseUrl = baseCDNUrl + "/galleries/" + galleryId + ".js";
 
-        String rawData = new String(AyayaUtils.GetFileFromUrl(baseUrl));
-        if  (rawData.length() == 3) {
-            throw new Exception("Failed to Get JS (code " + rawData + ")");
+        byte[] rawData = AyayaUtils.GetFileFromUrl(baseUrl);
+        if  (rawData == null) {
+            System.out.println("[ERR > Hitomi.GetGalleryData()] Failed to Get " + galleryId + ".js");
+            return null;
         }
+        String rawJson = new String(rawData).replace("var galleryinfo = ", "");
 
-        rawData = rawData.replace("var galleryinfo = ", "");
-
-        ObjectMapper objectMapper = new ObjectMapper();
-
+        ArrayList<String> galleryData = new ArrayList<>();
         try {
-            JsonNode rootNode = objectMapper.readTree(rawData);
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(rawJson);
             JsonNode files = rootNode.get("files");
 
             for (JsonNode node : files) {
                 String fileHash = node.get("hash").asText();
-                Boolean hasAvif = node.get("hasavif").asBoolean();
+                // Boolean hasAvif = node.get("hasavif").asBoolean();
 
-                galleryData.put(fileHash, hasAvif);
+                galleryData.add(fileHash);
             }
-        } catch (JsonProcessingException e) {
-            System.out.println("[ERR] In Hitomi.getGalleryData() > " + e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            System.out.println("[ERR > Hitomi.GetGalleryData()] Failed to Parse JSON\n" + e.getMessage());
+            return null;
         }
 
         return galleryData;
     }
 
-    private static String getIdFromGG(String regex, String data) {
+    private static Integer getIdFromGG(String regex, String data) {
         Matcher matcher = Pattern.compile(regex).matcher(data);
-        String regexData = "";
+        int regexData;
         matcher.find();
-        regexData = matcher.group(1);
+        regexData = Integer.parseInt(matcher.group(1));
         return regexData;
     }
 
-    private static Map<String, Integer> getOffsetsFromGG(String regex, String data, Integer key) {
+    private static Map<Integer, Integer> getOffsetsFromGG(String regex, String data, Integer key) {
         Matcher matcher = Pattern.compile(regex).matcher(data);
-        Map<String, Integer> offsets = new HashMap<>();
+        Map<Integer, Integer> offsets = new HashMap<>();
         while (matcher.find()) {
-            offsets.put(matcher.group(1), key);
+            offsets.put(Integer.parseInt(matcher.group(1)), key);
         }
         return offsets;
     }
 
     private static String getGGJS() {
         String baseUrl = baseCDNUrl + "/gg.js";
-
-        try {
-            return new String(AyayaUtils.GetFileFromUrl(baseUrl));
-        } catch (Exception e) {
-            System.out.println("[ERR] In Hitomi.GetGGJS() > " + e.getMessage());
-            return "";
+        byte[] rawJs = AyayaUtils.GetFileFromUrl(baseUrl);
+        if (rawJs == null) {
+            System.out.println("[ERR > Hitomi.GetGGJS()] Failed to Get gg.js");
+            return null;
         }
+        return new String(rawJs);
     }
 
-    private static String getImageUrl(String rawGG, String hash, Boolean hasAvif) {
-        String DefaultSubdomainKey = getIdFromGG("var o = (\\d)", rawGG);
-        String SubdomainKey = getIdFromGG("o = (\\d); break;", rawGG);
-        String CommonImagePath = getIdFromGG("b: '(.+)'", rawGG);
+    private static String getImageUrl(String rawGG, String hash) {
+        int defaultDomainKey = getIdFromGG("var o = (\\d)", rawGG) + 1;
+        int offsetDomainKey = getIdFromGG("o = (\\d); break;", rawGG) + 1;
+        int commonKey = getIdFromGG("b: '(\\d+)\\/'", rawGG);
 
-        Map<String, Integer> Offsets = getOffsetsFromGG("case (\\d+):", rawGG, Integer.parseInt(SubdomainKey));
-
-        String ImageUrl = "";
-        Integer SubdomainOffset = Integer.parseInt(DefaultSubdomainKey) + 1;
+        Map<Integer, Integer> Offsets = getOffsetsFromGG("case (\\d+):", rawGG, offsetDomainKey);
+        int domainOffset = defaultDomainKey;
 
         // ex) hash == 415e8c1bfbac7cb6192b6f7c14768c196dde9029233126ca5f108d6aa99818de
         // 8de to slice hash[-1:] / hash[-3:-1] (e / 8d)
         // -> s == hash[-1:] + hash[-3:-1] == "e8d"
-        String SubKey = hash.substring(hash.length() - 1, hash.length()) + hash.substring(hash.length() - 3, hash.length() - 1);
-
         // s to parseInt(s, 16) == 3725 == ImageId
-        Integer ImageId = Integer.parseInt(SubKey, 16);
+        int imageId = Integer.parseInt(hash.substring(hash.length() - 1) + hash.substring(hash.length() - 3, hash.length() - 1), 16);
+        if (Offsets.containsKey(imageId)) domainOffset = offsetDomainKey;
 
-        if (Offsets.containsKey(ImageId.toString())) SubdomainOffset = Integer.parseInt(SubdomainKey) + 1;
-
-        // a{key}.gold-usergeneratedcontent.net/1749488401/3725/415e8c1bfbac7cb6192b6f7c14768c196dde9029233126ca5f108d6aa99818de.avif
         // domain number (a1, a2 / w1, w2..)
         // webp = w1, w2 / avif = a1, a2
-        // in gg.js case -> o(SubdomainKey) + 1 == 1, out of ggjs case -> o(DefaultSubdomainKey) + 1 == 2
-        // hasavif flag 1 -> a1, a2 / flag 0 -> w1, w2
 
-        // if (hasAvif) ImageUrl = "https://a" + SubdomainOffset + cdnUrl + "/" + CommonImagePath + ImageId + "/" + hash + ".avif";
-        // else ImageUrl = "https://w" + SubdomainOffset + cdnUrl + "/" + CommonImagePath + ImageId + "/" + hash + ".webp";
-        ImageUrl = "https://w" + SubdomainOffset + cdnUrl + "/" + CommonImagePath + ImageId + "/" + hash + ".webp";
-
-        // System.out.println("ImageUrl: " + ImageUrl);
-
-        return ImageUrl;
+        return "https://w" + domainOffset + cdnUrl + "/" + commonKey + "/" + imageId + "/" + hash + ".webp";
     }
 
     public static String GetHitomiData(Integer galleryId) {
-        Map<String, Boolean> galleryData = new LinkedHashMap<>();
-        ArrayList<String> images = new ArrayList<>();
-
-        try {
-            galleryData = getGalleryData(galleryId);
-        } catch (Exception e) {
-            System.err.println("In Hitomi.main() > " + e.getMessage());
-            return "";
+        ArrayList<String> galleryData = getGalleryData(galleryId);
+        if (galleryData == null) {
+            System.err.println("[ERR > Hitomi.GetHitomiData()] Failed to Get Gallery Data");
+            return null;
         }
 
         String GGJS = getGGJS();
+        if  (GGJS == null) {
+            System.err.println("[ERR > Hitomi.GetHitomiData()] Failed to Get gg.js");
+            return null;
+        }
 
-        galleryData.forEach((hash, hasAvif) -> {
-            images.add(getImageUrl(GGJS, hash, hasAvif));
-        });
+        ArrayList<String> images = new ArrayList<>();
+
+        galleryData.forEach((hash) -> images.add(getImageUrl(GGJS, hash)));
 
         return images.get(0);
-    }
-
-    public static void main(String[] args) {
-        // GetHitomiData(3390541);
     }
 }

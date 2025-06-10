@@ -30,7 +30,7 @@ public class AyayaUtils {
                 return out.toByteArray();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("[ERR > AyayaUtils.GetFileFromUrl()] Failed to Get Data\n" + e.getMessage());
             return null;
         } finally {
             if (conn != null) {
@@ -47,7 +47,7 @@ public class AyayaUtils {
             ImageIO.write(image, "png", baos);
             return baos.toByteArray();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("[ERR > AyayaUtils.ConvertWebpToPng()] Failed to Convert Webp\n" + e.getMessage());
             return null;
         }
     }

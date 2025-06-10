@@ -5,7 +5,6 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -30,7 +29,7 @@ public class AyayaBot {
         try {
             jda.awaitReady();
         } catch (InterruptedException e) {
-            System.err.println("[ERR] In AyayaBot.main() > " + e.getMessage());
+            System.err.println("[ERR > AyayaBot.main()] Failed to Init\n" + e.getMessage());
         }
 
     }
@@ -55,7 +54,6 @@ class BotListener extends ListenerAdapter {
         List<Guild> guildList = jda.getGuilds();
         for (Guild guild : guildList) {
             System.out.println("Contain Guild : " + guild.getName());
-            // System.out.println("ID: " + guild.get);
         }
 
         System.out.println(jda.getSelfUser().getName() + " is Ready.");
@@ -73,34 +71,30 @@ class BotListener extends ListenerAdapter {
     }
 
     public void hitomi(SlashCommandInteractionEvent event, Integer id) {
+        event.reply("작품을 로드합니다. 조금 기다려주세요...").setEphemeral(true).queue();
+
         EmbedBuilder eb = new EmbedBuilder();
+
         eb.setTitle("품번 : " + id);
         eb.setTimestamp(Instant.now());
 
-        // eb.setDescription("This image has been added to the bot.");
-        // eb.addBlankField(false);
-
         byte[] webpData = AyayaUtils.GetFileFromUrl(Hitomi.GetHitomiData(id));
         if (webpData == null) {
-            event.reply("URL에서 이미지를 가져오지 못했습니다. URL이나 서버 상태를 확인해주세요.")
-                    .setEphemeral(true)
-                    .queue();
+            event.getHook().editOriginal("URL에서 이미지를 가져오지 못했습니다. URL이나 서버 상태를 확인해주세요.").queue();
             return;
         }
 
         byte[] pngData = AyayaUtils.ConvertWebpToPng(webpData);
         if (pngData == null) {
-            event.reply("이미지를 PNG로 변환하는 데 실패했습니다. 파일이 올바른 WebP 형식이 아닐 수 있습니다.")
-                    .setEphemeral(true).queue();
+            event.getHook().editOriginal("이미지를 PNG로 변환하는 데 실패했습니다. 파일이 올바른 WebP 형식이 아닐 수 있습니다.").queue();
             return;
         }
 
         eb.setImage("attachment://" + "1.png");
         eb.setFooter("Uploader : " + event.getUser().getName());
 
-        event.reply("작품을 로드합니다. 조금 기다려주세요...").setEphemeral(true).queue();
         FileUpload fileUpload = FileUpload.fromData(pngData, "1.png");
         event.getChannel().sendFiles(fileUpload).setEmbeds(eb.build()).queue();
-        event.getHook().sendMessage("작품을 받아오는 데에 성공하였습니다!").setEphemeral(true).queue();
+        event.getHook().editOriginal("작품을 받아오는 데에 성공하였습니다!").queue();
     }
 }

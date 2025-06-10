@@ -31,7 +31,6 @@ public class AyayaBot {
         } catch (InterruptedException e) {
             System.err.println("[ERR > AyayaBot.main()] Failed to Init\n" + e.getMessage());
         }
-
     }
 }
 

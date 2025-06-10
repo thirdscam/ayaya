@@ -15,7 +15,6 @@ public class AyayaUtils {
             conn.setRequestMethod("GET");
 
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36");
-            conn.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
             conn.setRequestProperty("Referer", "https://hitomi.la/");
 
             if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {

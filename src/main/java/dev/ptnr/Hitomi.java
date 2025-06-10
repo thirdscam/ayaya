@@ -30,7 +30,6 @@ public class Hitomi {
 
             for (JsonNode node : files) {
                 String fileHash = node.get("hash").asText();
-                // Boolean hasAvif = node.get("hasavif").asBoolean();
 
                 galleryData.add(fileHash);
             }

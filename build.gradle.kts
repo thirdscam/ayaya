@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "dev.ptnr"
-version = "1.0-SNAPSHOT"
+version = "0.0.1"
 
 repositories {
     mavenCentral()
@@ -23,6 +23,13 @@ dependencies {
     }
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.12.0")
+    implementation("io.github.cdimascio:dotenv-java:3.2.0")
+}
+
+tasks.jar {
+    manifest { attributes["Main-Class"] = "dev.ptnr.AyayaBot" }
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.test {

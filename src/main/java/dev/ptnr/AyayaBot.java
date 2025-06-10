@@ -1,5 +1,6 @@
 package dev.ptnr;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -19,7 +20,7 @@ import java.util.List;
 
 public class AyayaBot {
     public static void main(String[] args) {
-        String token = System.getenv("DISCORD_TOKEN");
+        String token = Dotenv.load().get("DISCORD_TOKEN");
 
         JDA jda = JDABuilder.createDefault(token)
                 .addEventListeners(new BotListener())

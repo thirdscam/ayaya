@@ -79,9 +79,12 @@ class BotListener extends ListenerAdapter {
         }
 
         EmbedBuilder eb = new EmbedBuilder();
-        eb.setTitle(hitomiData.getTitle()).setUrl("https://hitomi.la/reader/"+id+".html");
+        eb.setTitle(hitomiData.getTitle()).setUrl("https://hitomi.la/reader/"+hitomiData.getId()+".html");
         eb.appendDescription("품번: `" + hitomiData.getId() + "`\n");
         eb.appendDescription("작가: `" + hitomiData.getArtistsAsString() + "`\n");
+        eb.appendDescription("그룹: `" + hitomiData.getGroupsAsString() + "`\n");
+        eb.appendDescription("캐릭터: `" + hitomiData.getCharactersAsString() + "`\n");
+        eb.appendDescription("시리즈: `" + hitomiData.getParodysAsString() + "`\n");
         eb.appendDescription("종류: `" + hitomiData.getType() + "`\n");
         eb.appendDescription("태그: `" + hitomiData.getTagsAsString() + "`");
 

@@ -20,6 +20,9 @@ public class Hitomi {
         JsonNode rootNode;
         ArrayList<String> imageHashList = new ArrayList<>();
         ArrayList<String> artists = new ArrayList<>();
+        ArrayList<String> groups = new ArrayList<>();
+        ArrayList<String> characters = new ArrayList<>();
+        ArrayList<String> parodys = new ArrayList<>();
         ArrayList<String> femaleTag = new ArrayList<>();
         ArrayList<String> maleTag = new ArrayList<>();
         ArrayList<String> normalTag = new ArrayList<>();
@@ -73,9 +76,30 @@ public class Hitomi {
             artists.add(artist);
         }
 
+        for (JsonNode node : rootNode.get("groups")) {
+            String group = node.get("group").asText();
+
+            groups.add(group);
+        }
+
+        for (JsonNode node : rootNode.get("characters")) {
+            String character = node.get("character").asText();
+
+            characters.add(character);
+        }
+
+        for (JsonNode node : rootNode.get("parodys")) {
+            String parody = node.get("parody").asText();
+
+            parodys.add(parody);
+        }
+
         HitomiDTO galleryData = new HitomiDTO(rootNode.get("title").asText(),
                                                 galleryId,
                                                 artists,
+                                                groups,
+                                                characters,
+                                                parodys,
                                                 rootNode.get("type").asText(),
                                                 rootNode.get("language").asText(),
                                                 imageHashList,
@@ -149,8 +173,11 @@ public class Hitomi {
     }
 
     public static void main(String[] args) {
-        HitomiDTO test = GetHitomiData(2154225);
+        HitomiDTO test = GetHitomiData(2997822);
         System.out.println(test.getTagsAsString());
         System.out.println(test.getArtistsAsString());
+        System.out.println(test.getGroupsAsString());
+        System.out.println(test.getCharactersAsString());
+        System.out.println(test.getParodysAsString());
     }
 }

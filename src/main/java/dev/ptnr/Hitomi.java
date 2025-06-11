@@ -1,5 +1,6 @@
 package dev.ptnr;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,31 +13,73 @@ public class Hitomi {
     private static final String cdnUrl = ".gold-usergeneratedcontent.net";
     private static final String baseCDNUrl = "https://ltn" + cdnUrl;
 
-    private static ArrayList<String> getGalleryData(Integer galleryId) {
+    private static HitomiDTO getGalleryData(Integer galleryId) {
         String baseUrl = baseCDNUrl + "/galleries/" + galleryId + ".js";
+        String rawJson;
+
+        JsonNode rootNode;
+        ArrayList<String> imageHashList = new ArrayList<>();
+        ArrayList<String> artists = new ArrayList<>();
+        ArrayList<String> femaleTag = new ArrayList<>();
+        ArrayList<String> maleTag = new ArrayList<>();
+        ArrayList<String> normalTag = new ArrayList<>();
+        Map<String, ArrayList<String>> tags = new HashMap<String, ArrayList<String>>();
 
         byte[] rawData = AyayaUtils.GetFileFromUrl(baseUrl);
         if  (rawData == null) {
             System.out.println("[ERR > Hitomi.GetGalleryData()] Failed to Get " + galleryId + ".js");
             return null;
         }
-        String rawJson = new String(rawData).replace("var galleryinfo = ", "");
+        
+        try {
+            rawJson = new String(rawData, "UTF-8").replace("var galleryinfo = ", "");
+        } catch (UnsupportedEncodingException e) {
+            System.out.println("[ERR > Hitomi.GetGalleryData()] Failed to Convert JSON");
+            return null;
+        }
 
-        ArrayList<String> galleryData = new ArrayList<>();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(rawJson);
-            JsonNode files = rootNode.get("files");
-
-            for (JsonNode node : files) {
-                String fileHash = node.get("hash").asText();
-
-                galleryData.add(fileHash);
-            }
+            rootNode = objectMapper.readTree(rawJson);
         } catch (Exception e) {
             System.out.println("[ERR > Hitomi.GetGalleryData()] Failed to Parse JSON\n" + e.getMessage());
             return null;
         }
+
+        for (JsonNode node : rootNode.get("files")) {
+            String fileHash = node.get("hash").asText();
+
+            imageHashList.add(fileHash);
+        }
+
+        for (JsonNode node : rootNode.get("tags")) {
+            String tag = node.get("tag").asText();
+
+            if (node.get("female") == null) {
+                normalTag.add(tag);
+                continue;
+            }
+
+            if (node.get("female").asInt() == 1) femaleTag.add(tag);
+            if (node.get("male").asInt() == 1) maleTag.add(tag);
+        }
+        tags.put("female", femaleTag);
+        tags.put("male", maleTag);
+        tags.put("tag", normalTag);
+
+        for (JsonNode node : rootNode.get("artists")) {
+            String artist = node.get("artist").asText();
+
+            artists.add(artist);
+        }
+
+        HitomiDTO galleryData = new HitomiDTO(rootNode.get("title").asText(),
+                                                galleryId,
+                                                artists,
+                                                rootNode.get("type").asText(),
+                                                rootNode.get("language").asText(),
+                                                imageHashList,
+                                                tags);
 
         return galleryData;
     }
@@ -68,44 +111,45 @@ public class Hitomi {
         return new String(rawJs);
     }
 
-    private static String getImageUrl(String rawGG, String hash) {
-        int defaultDomainKey = getIdFromGG("var o = (\\d)", rawGG) + 1;
-        int offsetDomainKey = getIdFromGG("o = (\\d); break;", rawGG) + 1;
-        int commonKey = getIdFromGG("b: '(\\d+)\\/'", rawGG);
-
-        Map<Integer, Integer> Offsets = getOffsetsFromGG("case (\\d+):", rawGG, offsetDomainKey);
-        int domainOffset = defaultDomainKey;
+    public static String getImageUrl(String hash) {
+        String ggData = getGGJS();
+        if (ggData == null) {
+            System.err.println("[ERR > Hitomi.GetHitomiData()] Failed to Get gg.js");
+            return null;
+        }
 
         // ex) hash == 415e8c1bfbac7cb6192b6f7c14768c196dde9029233126ca5f108d6aa99818de
         // 8de to slice hash[-1:] / hash[-3:-1] (e / 8d)
         // -> s == hash[-1:] + hash[-3:-1] == "e8d"
         // s to parseInt(s, 16) == 3725 == ImageId
         int imageId = Integer.parseInt(hash.substring(hash.length() - 1) + hash.substring(hash.length() - 3, hash.length() - 1), 16);
+        
+        int defaultDomainKey = getIdFromGG("var o = (\\d)", ggData) + 1;
+        int offsetDomainKey = getIdFromGG("o = (\\d); break;", ggData) + 1;
+        int commonKey = getIdFromGG("b: '(\\d+)\\/'", ggData);
+
+        Map<Integer, Integer> Offsets = getOffsetsFromGG("case (\\d+):", ggData, offsetDomainKey);
+        
+        int domainOffset = defaultDomainKey;
         if (Offsets.containsKey(imageId)) domainOffset = offsetDomainKey;
 
         // domain number (a1, a2 / w1, w2..)
         // webp = w1, w2 / avif = a1, a2
-
         return "https://w" + domainOffset + cdnUrl + "/" + commonKey + "/" + imageId + "/" + hash + ".webp";
     }
 
-    public static String GetHitomiData(Integer galleryId) {
-        ArrayList<String> galleryData = getGalleryData(galleryId);
+    public static HitomiDTO GetHitomiData(Integer galleryId) {
+        HitomiDTO galleryData = getGalleryData(galleryId);
         if (galleryData == null) {
             System.err.println("[ERR > Hitomi.GetHitomiData()] Failed to Get Gallery Data");
             return null;
         }
 
-        String GGJS = getGGJS();
-        if  (GGJS == null) {
-            System.err.println("[ERR > Hitomi.GetHitomiData()] Failed to Get gg.js");
-            return null;
-        }
+        return galleryData;
+    }
 
-        ArrayList<String> images = new ArrayList<>();
-
-        galleryData.forEach((hash) -> images.add(getImageUrl(GGJS, hash)));
-
-        return images.get(0);
+    public static void main(String[] args) {
+        HitomiDTO test = GetHitomiData(3392566);
+        System.out.println(test.getTagsAsString());
     }
 }

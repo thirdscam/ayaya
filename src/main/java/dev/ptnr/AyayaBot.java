@@ -72,12 +72,17 @@ class BotListener extends ListenerAdapter {
     public void hitomi(SlashCommandInteractionEvent event, Integer id) {
         event.reply("작품을 로드합니다. 조금 기다려주세요...").setEphemeral(true).queue();
 
+        HitomiDTO hitomiData = Hitomi.GetHitomiData(id);
+
         EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle(hitomiData.getTitle());
+        eb.appendDescription("`품번: " + hitomiData.getId() + "`\n");
+        eb.appendDescription("`작가: " + hitomiData.getArtistsAsString() + "`\n");
+        eb.appendDescription("`종류: " + hitomiData.getType() + "`\n");
+        eb.appendDescription("`태그: " + hitomiData.getTagsAsString() + "`");
 
-        eb.setTitle("품번 : " + id);
-        eb.setTimestamp(Instant.now());
-
-        byte[] webpData = AyayaUtils.GetFileFromUrl(Hitomi.GetHitomiData(id));
+        String coverUrl = Hitomi.getImageUrl(hitomiData.getImageHashList().get(0));
+        byte[] webpData = AyayaUtils.GetFileFromUrl(coverUrl);
         if (webpData == null) {
             event.getHook().editOriginal("URL에서 이미지를 가져오지 못했습니다. URL이나 서버 상태를 확인해주세요.").queue();
             return;
@@ -91,6 +96,7 @@ class BotListener extends ListenerAdapter {
 
         eb.setImage("attachment://" + "1.png");
         eb.setFooter("Uploader : " + event.getUser().getName());
+        eb.setTimestamp(Instant.now());
 
         FileUpload fileUpload = FileUpload.fromData(pngData, "1.png");
         event.getChannel().sendFiles(fileUpload).setEmbeds(eb.build()).queue();

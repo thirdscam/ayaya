@@ -149,7 +149,8 @@ public class Hitomi {
     }
 
     public static void main(String[] args) {
-        HitomiDTO test = GetHitomiData(3392566);
+        HitomiDTO test = GetHitomiData(2154225);
         System.out.println(test.getTagsAsString());
+        System.out.println(test.getArtistsAsString());
     }
 }

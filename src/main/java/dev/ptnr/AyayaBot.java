@@ -73,13 +73,17 @@ class BotListener extends ListenerAdapter {
         event.reply("작품을 로드합니다. 조금 기다려주세요...").setEphemeral(true).queue();
 
         HitomiDTO hitomiData = Hitomi.GetHitomiData(id);
+        if (hitomiData == null) {
+            event.getHook().editOriginal("작품을 가져오는 데 오류가 발생하였습니다.\n존재하는 ID인지 확인해주세요.").queue();
+            return;
+        }
 
         EmbedBuilder eb = new EmbedBuilder();
-        eb.setTitle(hitomiData.getTitle());
-        eb.appendDescription("`품번: " + hitomiData.getId() + "`\n");
-        eb.appendDescription("`작가: " + hitomiData.getArtistsAsString() + "`\n");
-        eb.appendDescription("`종류: " + hitomiData.getType() + "`\n");
-        eb.appendDescription("`태그: " + hitomiData.getTagsAsString() + "`");
+        eb.setTitle(hitomiData.getTitle()).setUrl("https://hitomi.la/reader/"+id+".html");
+        eb.appendDescription("품번: `" + hitomiData.getId() + "`\n");
+        eb.appendDescription("작가: `" + hitomiData.getArtistsAsString() + "`\n");
+        eb.appendDescription("종류: `" + hitomiData.getType() + "`\n");
+        eb.appendDescription("태그: `" + hitomiData.getTagsAsString() + "`");
 
         String coverUrl = Hitomi.getImageUrl(hitomiData.getImageHashList().get(0));
         byte[] webpData = AyayaUtils.GetFileFromUrl(coverUrl);

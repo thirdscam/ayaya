@@ -36,11 +36,14 @@ public class HitomiDTO {
             for (String tag : this.tags.get("tag")) tags += "tag:" + tag + ", ";
         }
 
+        if (tags.isEmpty()) return "N/A";
+
         return tags.substring(0, tags.length() - 2);
     }
 
     public String getArtistsAsString() {
         String artists = "";
+        if (this.artists.isEmpty()) return "N/A";
         if (this.artists.size() == 1) return this.artists.get(0);
         
         for (String artist : this.artists) artists += artist + ", ";

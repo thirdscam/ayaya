@@ -1,6 +1,7 @@
 package dev.ptnr;
 
-import java.io.UnsupportedEncodingException;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,12 +35,7 @@ public class Hitomi {
             return null;
         }
         
-        try {
-            rawJson = new String(rawData, "UTF-8").replace("var galleryinfo = ", "");
-        } catch (UnsupportedEncodingException e) {
-            System.out.println("[ERR > Hitomi.GetGalleryData()] Failed to Convert JSON");
-            return null;
-        }
+        rawJson = new String(rawData, StandardCharsets.UTF_8).replace("var galleryinfo = ", "");
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -173,11 +169,22 @@ public class Hitomi {
     }
 
     public static void main(String[] args) {
-        HitomiDTO test = GetHitomiData(2997822);
+        HitomiDTO test = GetHitomiData(3193561);
         System.out.println(test.getTagsAsString());
         System.out.println(test.getArtistsAsString());
         System.out.println(test.getGroupsAsString());
         System.out.println(test.getCharactersAsString());
         System.out.println(test.getParodysAsString());
+
+        String downloadPath = "D:\\Hitomi_Test";
+        int idx = 1;
+
+        for (String hash : test.getImageHashList()) {
+            File file = new File(downloadPath + "/" + test.getId());
+            file.mkdirs();
+            byte[] data = AyayaUtils.GetFileFromUrl(getImageUrl(hash));
+            AyayaUtils.writeFile(downloadPath + "/" + test.getId() + "/" + idx + ".webp", data);
+            ++idx;
+        }
     }
 }

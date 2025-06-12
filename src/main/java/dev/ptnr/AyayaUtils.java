@@ -50,4 +50,16 @@ public class AyayaUtils {
             return null;
         }
     }
+
+    public static boolean writeFile(String location, byte[] data) {
+        File file = new File(location);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(data);
+            fos.close();
+        } catch (IOException e) {
+            System.out.println("[ERR > AyayaUtils.writeFile()] Failed to Convert Webp\n" + e.getMessage());
+            return false;
+        }
+        return true;
+    }
 }
